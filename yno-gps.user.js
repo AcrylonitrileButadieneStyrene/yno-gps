@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        YNO GPS
 // @match       *://ynoproject.net/*
-// @version     0.1.0
+// @version     0.1.1
 // @description In-game pathfinding overlay
 // @noframes
 // @grant       unsafeWindow
@@ -33,27 +33,38 @@ Object.assign(overlay.style, {
   position: "absolute",
   mixBlendMode: "difference",
   pointerEvents: "none",
+  marginTop: "120px",
 });
+document.getElementById("canvas").parentNode.appendChild(overlay);
 const context = overlay.getContext("2d");
 context.fillStyle = "white";
 
-let currentMap;
 const easyrpgWaiter = setInterval(() => {
-  try { easyrpgPlayer; onPlayerTeleported; } catch { return; }
+  try { easyrpgPlayer; onPlayerTeleported; updateCanvasOverlays; } catch { return; }
   clearInterval(easyrpgWaiter);
+  patchTeleport();
+  patchUpdateOverlays();
+  requestAnimationFrame(animate);
+}, 100);
 
+let currentMap;
+function patchTeleport() {
   const original = onPlayerTeleported;
   onPlayerTeleported = function(map) {
     currentMap = map;
     return original.apply(this, arguments);
   };
-  requestAnimationFrame(animate);
-}, 100);
+}
 
-setTimeout(() => {
-  document.getElementById("canvas").parentNode.appendChild(overlay);
-  document.getElementById("canvasContainer").style.position = "relative";
-}, 10_000);
+function patchUpdateOverlays() {
+  const original = updateCanvasOverlays;
+  updateCanvasOverlays = function() {
+    const value = original.apply(this, arguments);
+    const chat = document.getElementById("gameChatContainer");
+    overlay.style.top = chat.style.top;
+    return value;
+  }
+}
 
 function animate(delta) {
   render(delta);
