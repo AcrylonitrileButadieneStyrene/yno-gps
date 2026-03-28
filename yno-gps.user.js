@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        YNO GPS
 // @match       *://ynoproject.net/*
-// @version     0.1.2
+// @version     0.1.3
 // @description In-game pathfinding overlay
 // @noframes
 // @grant       unsafeWindow
@@ -10,20 +10,12 @@
 // @homepageURL https://github.com/AcrylonitrileButadieneStyrene/yno-gps/blob/master/README.md
 // ==/UserScript==
 
-const config = {
-  51: {
-    width: 145,
-    height: 99,
-    loop_vertical: true,
-    loop_horizontal: true,
-    directions: [
-      { name: "To Dark Room", path: [
-        [[88, 12], 13],
-        [88, [74, 12]],
-      ] },
-    ],
-  }
-};
+const configUrl = "https://cdn.jsdelivr.net/gh/AcrylonitrileButadieneStyrene/yno-gps@data";
+
+const config = {};
+const game = document.location.pathname.replace(/\//g, "");
+const index = fetch(`${configUrl}/index/${game}.json`)
+  .then(response => response.json());
 
 const overlay = document.createElement("canvas");
 overlay.width = 320;
@@ -52,6 +44,7 @@ function patchTeleport() {
   const original = onPlayerTeleported;
   onPlayerTeleported = function(map) {
     currentMap = map;
+    loadMap(map);
     return original.apply(this, arguments);
   };
 }
@@ -64,6 +57,16 @@ function patchUpdateOverlays() {
     overlay.style.top = chat.style.top;
     return value;
   }
+}
+
+function loadMap(map) {
+  if (map in config)
+    return;
+  config[map] = undefined;
+  if (map in index)
+    fetch(`${configUrl}/data/${game}/${map}.json`)
+      .then(response => response.json())
+      .then(value => config[map] = value);
 }
 
 function animate(delta) {
@@ -112,4 +115,3 @@ function drawTile(tx, ty, px, py) {
   context.rect(dx * 16, dy * 16, 16, 16);
   context.fill();
 }
-
