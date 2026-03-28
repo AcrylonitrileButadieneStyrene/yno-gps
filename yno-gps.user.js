@@ -18,7 +18,7 @@
  */
 
 // deno-lint-ignore-file
-// userscript/index.ts
+// userscript/config.ts
 var game = document.location.pathname.replace(/\//g, "");
 var indexUrl = `https://raw.githubusercontent.com/AcrylonitrileButadieneStyrene/yno-gps/data/index/${game}.json`;
 var dataUrl = "https://cdn.jsdelivr.net/gh/AcrylonitrileButadieneStyrene/yno-gps@data";
@@ -39,6 +39,7 @@ async function fetchIndex() {
   const status = response.status;
   const statusText = response.statusText;
   if (status >= 400) {
+    if (status == 404) return;
     alert(`An issue occurred with loading the yno-gps index: ${status} (${statusText})`);
     throw statusText;
   }
@@ -71,6 +72,13 @@ async function updateIndex() {
   index = JSON.parse(await fetchIndex());
 }
 updateIndex();
+function loadMap(map) {
+  if (map in config) return;
+  config[map] = void 0;
+  if (index.includes(map)) fetch(`${dataUrl}/data/${game}/${map}.json`).then((response) => response.json()).then((value) => config[map] = value);
+}
+
+// userscript/renderer.ts
 var overlay = document.createElement("canvas");
 overlay.width = 320;
 overlay.height = 240;
@@ -84,42 +92,6 @@ Object.assign(overlay.style, {
 document.getElementById("canvas").parentNode.appendChild(overlay);
 var context = overlay.getContext("2d");
 context.fillStyle = "white";
-var easyrpgWaiter = setInterval(() => {
-  try {
-    easyrpgPlayer;
-    onPlayerTeleported;
-    updateCanvasOverlays;
-  } catch {
-    return;
-  }
-  clearInterval(easyrpgWaiter);
-  patchTeleport();
-  patchUpdateOverlays();
-  requestAnimationFrame(animate);
-}, 100);
-var currentMap;
-function patchTeleport() {
-  const original = onPlayerTeleported;
-  onPlayerTeleported = function(map) {
-    currentMap = map;
-    loadMap(map);
-    return original.apply(this, arguments);
-  };
-}
-function patchUpdateOverlays() {
-  const original = updateCanvasOverlays;
-  updateCanvasOverlays = function() {
-    const value = original.apply(this, arguments);
-    const chat = document.getElementById("gameChatContainer");
-    overlay.style.top = chat.style.top;
-    return value;
-  };
-}
-function loadMap(map) {
-  if (map in config) return;
-  config[map] = void 0;
-  if (index.includes(map)) fetch(`${dataUrl}/data/${game}/${map}.json`).then((response) => response.json()).then((value) => config[map] = value);
-}
 function animate() {
   render();
   requestAnimationFrame(animate);
@@ -165,3 +137,38 @@ function drawTile(tx, ty, px, py) {
   context.rect(dx * 16, dy * 16, 16, 16);
   context.fill();
 }
+
+// userscript/patches.ts
+var currentMap;
+function patchTeleport() {
+  const original = onPlayerTeleported;
+  onPlayerTeleported = function(map) {
+    currentMap = map;
+    loadMap(map);
+    return original.apply(this, arguments);
+  };
+}
+function patchUpdateOverlays() {
+  const original = updateCanvasOverlays;
+  updateCanvasOverlays = function() {
+    const value = original.apply(this, arguments);
+    const chat = document.getElementById("gameChatContainer");
+    overlay.style.top = chat.style.top;
+    return value;
+  };
+}
+
+// userscript/index.ts
+var easyrpgWaiter = setInterval(() => {
+  try {
+    easyrpgPlayer;
+    onPlayerTeleported;
+    updateCanvasOverlays;
+  } catch {
+    return;
+  }
+  clearInterval(easyrpgWaiter);
+  patchTeleport();
+  patchUpdateOverlays();
+  requestAnimationFrame(animate);
+}, 100);
