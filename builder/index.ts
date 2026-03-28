@@ -1,12 +1,12 @@
-import { parse } from "https://deno.land/std/toml/mod.ts";
+import { parse } from "https://deno.land/std@0.224.0/toml/mod.ts";
 
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 
-await Deno.mkdir("public/index/", { recursive: true });
+Deno.mkdirSync("public/index/", { recursive: true });
 
 for (const game of Deno.readDirSync("data/")) {
-    await Deno.mkdir(`public/data/${game.name}/`, { recursive: true })
+    Deno.mkdirSync(`public/data/${game.name}/`, { recursive: true })
 
     const index: number[] = [];
     for (const map of Deno.readDirSync(`data/${game.name}/`)) {
@@ -28,3 +28,13 @@ for (const game of Deno.readDirSync("data/")) {
         encoder.encode(JSON.stringify(index.sort()))
     );
 }
+
+await Deno.bundle({
+    entrypoints: ["userscript/index.ts"],
+    outputDir: "public/",
+    platform: "browser",
+});
+const contents = decoder.decode(Deno.readFileSync("public/index.js"));
+const header = decoder.decode(Deno.readFileSync("userscript/yno-gps.meta.js"));
+Deno.writeFileSync("public/yno-gps.user.js", encoder.encode(header + "\n" + contents));
+Deno.removeSync("public/index.js");
