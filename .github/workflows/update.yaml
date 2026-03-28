@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - master
-    paths:
-      - "data/**/*.toml"
 
 jobs:
   update:
@@ -19,7 +17,7 @@ jobs:
         with:
           fetch-depth: 2
       - uses: denoland/setup-deno@v2
-      - run: builder/index.ts
+      - run: deno run --allow-all builder/index.ts
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}

@@ -1,5 +1,3 @@
-#!/usr/bin/env -S deno run --allow-all
-
 import { parse } from "https://deno.land/std/toml/mod.ts";
 
 const encoder = new TextEncoder();
