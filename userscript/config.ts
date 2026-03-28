@@ -31,6 +31,9 @@ async function fetchIndex() {
     const status = response.status;
     const statusText = response.statusText;
     if (status >= 400) {
+        if (status == 404)
+            return;
+
         alert(`An issue occurred with loading the yno-gps index: ${status} (${statusText})`);
         throw statusText;
     }
