@@ -1,0 +1,12 @@
+width = 145
+height = 99
+
+[loop]
+vertical = true
+horizontal = true
+
+[directions]
+"To Dark Room" = [ #
+  [[88, 12], 13],
+  [88, [74, 12]],
+]

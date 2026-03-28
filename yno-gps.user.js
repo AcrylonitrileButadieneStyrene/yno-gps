@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        YNO GPS
 // @match       *://ynoproject.net/*
-// @version     0.1.1
+// @version     0.1.2
 // @description In-game pathfinding overlay
 // @noframes
 // @grant       unsafeWindow
@@ -76,9 +76,9 @@ function render() {
   const world = config[currentMap];
   if (!world) return;
 
-  let route = world.directions[0];
+  const route = world.directions[0];
 
-  let [px, py] = easyrpgPlayer.api.getPlayerCoords();
+  const [px, py] = easyrpgPlayer.api.getPlayerCoords();
   for (const line of route.path) {
     let x = line[0];
     if (!Array.isArray(x))
@@ -91,8 +91,8 @@ function render() {
     else if (!world.height)
       y = swapLoopless(y);
 
-    let [sx, ex] = x;
-    let [sy, ey] = y;
+    const [sx, ex] = x;
+    const [sy, ey] = y;
     for (let i = sx; i - 1 != ex; i = (i + 1) % world.width)
       for (let j = sy; j - 1 != ey; j = (j + 1) % world.height)
         drawTile(i, j, px, py);
@@ -106,8 +106,8 @@ function swapLoopless([a, b]) {
 }
 
 function drawTile(tx, ty, px, py) {
-  let dx = tx - (px - 9);
-  let dy = ty - (py - 7);
+  const dx = tx - (px - 9);
+  const dy = ty - (py - 7);
   context.beginPath();
   context.rect(dx * 16, dy * 16, 16, 16);
   context.fill();

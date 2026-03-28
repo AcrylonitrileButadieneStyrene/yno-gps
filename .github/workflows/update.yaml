@@ -1,0 +1,27 @@
+name: Update Datasets
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - "data/**/*.toml"
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - uses: denoland/setup-deno@v2
+      - run: builder/index.ts
+      - uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: data
+          publish_dir: ./public
