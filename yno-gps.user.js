@@ -1,21 +1,73 @@
 // ==UserScript==
 // @name        YNO GPS
 // @match       *://ynoproject.net/*
-// @version     0.1.3
+// @version     0.1.4
 // @description In-game pathfinding overlay
 // @noframes
-// @grant       unsafeWindow
+// @grant       GM_registerMenuCommand
+// @grant       GM_unregisterMenuCommand
 // @downloadURL https://raw.githubusercontent.com/AcrylonitrileButadieneStyrene/yno-gps/master/yno-gps.user.js
 // @supportURL  https://github.com/AcrylonitrileButadieneStyrene/yno-gps/issues
 // @homepageURL https://github.com/AcrylonitrileButadieneStyrene/yno-gps/blob/master/README.md
 // ==/UserScript==
 
-const configUrl = "https://cdn.jsdelivr.net/gh/AcrylonitrileButadieneStyrene/yno-gps@data";
-
-const config = {};
 const game = document.location.pathname.replace(/\//g, "");
-const index = fetch(`${configUrl}/index/${game}.json`)
-  .then(response => response.json());
+const indexUrl = `https://raw.githubusercontent.com/AcrylonitrileButadieneStyrene/yno-gps/data/index/${game}.json`;
+const dataUrl = "https://cdn.jsdelivr.net/gh/AcrylonitrileButadieneStyrene/yno-gps@data";
+const maxAge = 86400000; // 1 day
+
+let index = [];
+const config = {};
+
+async function fetchIndex() {
+  const cache = await unsafeWindow.caches.open("yno-gps");
+  const cached = await cache.match(indexUrl);
+  if (cached) {
+    const cachedDate = new Date(cached.headers.get("Date"))
+    if (new Date() - cachedDate < maxAge) {
+      updateStatus(cache, cachedDate);
+      return await cached.text();
+    }
+  }
+
+  const response = await fetch(indexUrl);
+  const status = response.status;
+  const statusText = response.statusText;
+  if (status >= 400) {
+    alert(`An issue occurred with loading the yno-gps index: ${status} (${statusText})`);
+    throw statusText;
+  }
+  const headers = new Headers(response.headers);
+  const text = await response.text();
+
+  let date = headers.get("Date");
+  if (date) date = new Date(date)
+  if (!date || isNaN(date.getTime()))
+    date = new Date();
+
+  headers.set("Date", date.toUTCString());
+  updateStatus(cache, date);
+
+  await cache.put(indexUrl, new Response(text, { status, statusText, headers }));
+  return text;
+}
+
+function updateStatus(cache, date) {
+  GM_unregisterMenuCommand("last-updated");
+  GM_registerMenuCommand(
+    "Last updated: " + date.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit', }),
+    () => {
+      cache.delete(indexUrl);
+      updateIndex();
+    },
+    { id: "last-updated" }
+  );
+}
+
+async function updateIndex() {
+  index = JSON.parse(await fetchIndex());
+};
+updateIndex();
 
 const overlay = document.createElement("canvas");
 overlay.width = 320;
@@ -63,8 +115,8 @@ function loadMap(map) {
   if (map in config)
     return;
   config[map] = undefined;
-  if (map in index)
-    fetch(`${configUrl}/data/${game}/${map}.json`)
+  if (index.includes(map))
+    fetch(`${dataUrl}/data/${game}/${map}.json`)
       .then(response => response.json())
       .then(value => config[map] = value);
 }
@@ -79,10 +131,10 @@ function render() {
   const world = config[currentMap];
   if (!world) return;
 
-  const route = world.directions[0];
+  const route = Object.values(world.directions)[0];
 
   const [px, py] = easyrpgPlayer.api.getPlayerCoords();
-  for (const line of route.path) {
+  for (const line of route) {
     let x = line[0];
     if (!Array.isArray(x))
       x = [x, x];
